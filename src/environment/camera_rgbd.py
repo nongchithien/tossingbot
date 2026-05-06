@@ -8,7 +8,7 @@ class CameraRGBD():
         self.position = position
         self.orientation = pybullet.getQuaternionFromEuler(orientation)
         self.noise = noise
-        self.img_size = (480, 848)
+        self.img_size = (240, 424)  
         self.intrinsics = (424.790, 0., 424.947, 0., 424.790, 237.767, 0, 0, 1)  
 
         # OpenGL camera settings.
@@ -37,7 +37,7 @@ class CameraRGBD():
             viewMatrix=self.viewm,
             projectionMatrix=self.projm,
             shadow=0,
-            flags=pybullet.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX,
+            flags = 0, # flags=pybullet.ER_SEGMENTATION_MASK_OBJECT_AND_LINKINDEX
             renderer=pybullet.ER_TINY_RENDERER)
 
         # Get color image.
