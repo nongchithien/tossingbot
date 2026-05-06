@@ -11,14 +11,14 @@ import time
 
 class Environment():
 
-    def __init__(self, seed=1, mode=pybullet.GUI):
+    def __init__(self, seed=1, mode=pybullet.DIRECT):
         seed_everything(seed=seed)
         self.dt = 1/480.0
         self.sim_step = 0
-        self.wait = True
+        self.wait = Flase # false when using headless mode
 
         # Configure and start pybullet
-        self.id = pybullet.connect(mode) # mode is pybullet.DIRECT or pybullet.GUI (default) for local GUI.
+        self.id = pybullet.connect(pybullet.DIRECT) # mode is pybullet.DIRECT or pybullet.GUI (default) for local GUI.
         pybullet.setPhysicsEngineParameter(enableFileCaching=0)
         pybullet.setAdditionalSearchPath(str(os.getcwd()))
         pybullet.configureDebugVisualizer(pybullet.COV_ENABLE_GUI, 0)
@@ -141,7 +141,7 @@ class Environment():
     def _step_simulation(self, n_steps):
         for _ in range(n_steps):
             pybullet.stepSimulation() 
-            if self.wait: time.sleep(self.dt)
+            # if self.wait: time.sleep(self.dt) --> headleass mode
 
     def _populate_objects(self):
         for _ in range(4):
