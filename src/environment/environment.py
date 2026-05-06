@@ -15,7 +15,7 @@ class Environment():
         seed_everything(seed=seed)
         self.dt = 1/480.0
         self.sim_step = 0
-        self.wait = Flase # false when using headless mode
+        self.wait = False # false when using headless mode
 
         # Configure and start pybullet
         self.id = pybullet.connect(pybullet.DIRECT) # mode is pybullet.DIRECT or pybullet.GUI (default) for local GUI.
