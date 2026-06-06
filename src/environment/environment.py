@@ -11,15 +11,21 @@ import time
 
 class Environment():
 
-    def __init__(self, seed=1, mode=pybullet.DIRECT):
+    def __init__(self, seed=1, mode=pybullet.GUI):
         seed_everything(seed=seed)
         self.dt = 1/480.0
         self.sim_step = 0
-        self.wait = False # false when using headless mode
+        self.wait = True
 
         # Configure and start pybullet
-        self.id = pybullet.connect(pybullet.DIRECT) # mode is pybullet.DIRECT or pybullet.GUI (default) for local GUI.
-        pybullet.setPhysicsEngineParameter(enableFileCaching=0)
+        self.id = pybullet.connect(mode) # mode is pybullet.DIRECT or pybullet.GUI (default) for local GUI.
+        pybullet.setPhysicsEngineParameter(
+            enableFileCaching=0,
+            numSolverIterations=150,      # default=50 → tăng để contact ổn định hơn
+            numSubSteps=1,                # chia nhỏ bước tích phân, chống tunneling lúc throw
+            contactERP=0.4,               # error reduction cho contact (0-1, default~0.2)
+            frictionERP=0.4,              # error reduction cho friction
+        )
         pybullet.setAdditionalSearchPath(str(os.getcwd()))
         pybullet.configureDebugVisualizer(pybullet.COV_ENABLE_GUI, 0)
         pybullet.setTimeStep(self.dt)
@@ -141,7 +147,7 @@ class Environment():
     def _step_simulation(self, n_steps):
         for _ in range(n_steps):
             pybullet.stepSimulation() 
-            # if self.wait: time.sleep(self.dt) --> headleass mode
+            if self.wait: time.sleep(self.dt)
 
     def _populate_objects(self):
         for _ in range(4):
