@@ -14,14 +14,20 @@ class Robotiq2F85:
     urdf = './assets/robotiq_2f_85/robotiq_2f_85.urdf'
     self.body = pybullet.loadURDF(urdf, pos, rot)
     self.n_joints = pybullet.getNumJoints(self.body)
+    self.left_pad_link_id = 4
+    self.right_pad_link_id = 9
     self.closed = False
 
     # Connect gripper base to robot tool.
-    pybullet.createConstraint(self.robot_id, self.ee_link_id, self.body, 0, jointType=pybullet.JOINT_FIXED, jointAxis=[0, 0, 0], parentFramePosition=[0, 0, 0], childFramePosition=[0, 0, -0.07], childFrameOrientation=pybullet.getQuaternionFromEuler([0, 0, np.pi / 2]))
+    self.mount_constraint_id = pybullet.createConstraint(self.robot_id, self.ee_link_id, self.body, 0, jointType=pybullet.JOINT_FIXED, jointAxis=[0, 0, 0], parentFramePosition=[0, 0, 0], childFramePosition=[0, 0, -0.07], childFrameOrientation=pybullet.getQuaternionFromEuler([0, 0, np.pi / 2]))
 
     # Set friction coefficients for gripper fingers.
     for i in range(pybullet.getNumJoints(self.body)):
-      pybullet.changeDynamics(self.body, i, lateralFriction=10.0, spinningFriction=1.0, rollingFriction=1.0, frictionAnchor=True)
+      '''
+      friction chose from reference : https://github.com/bulletphysics/bullet3/blob/master/examples/pybullet/gym/pybullet_data/franka_panda/panda.urdf
+      '''
+      pybullet.changeDynamics(self.body, i, lateralFriction=1.0, spinningFriction=0.1, rollingFriction=0.1, frictionAnchor=True, contactStiffness=30000, contactDamping=1000)
+
 
     # Start thread to handle additional gripper constraints.
     self.running = True
@@ -53,9 +59,19 @@ class Robotiq2F85:
     pybullet.setJointMotorControl2(self.body, self.motor_joint, pybullet.VELOCITY_CONTROL, targetVelocity=-1, force=14)
     self.closed = False
 
+  def get_wrist_force_torque(self):
+    raw = np.array(pybullet.getConstraintState(self.mount_constraint_id), dtype=np.float32)
+    force = raw[:3] if raw.size >= 3 else np.zeros(3, dtype=np.float32)
+    torque = raw[3:6] if raw.size >= 6 else np.zeros(3, dtype=np.float32)
+    return {
+      'force': force,
+      'torque': torque,
+      'raw': raw
+    }
+
   def grasp_width(self):
-    lpad = np.array(pybullet.getLinkState(self.body, 4)[0])
-    rpad = np.array(pybullet.getLinkState(self.body, 9)[0])
+    lpad = np.array(pybullet.getLinkState(self.body, self.left_pad_link_id)[0])
+    rpad = np.array(pybullet.getLinkState(self.body, self.right_pad_link_id)[0])
     dist = np.linalg.norm(lpad - rpad) - 0.047813
     return dist
-     
+  
