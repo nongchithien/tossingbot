@@ -114,17 +114,35 @@ class Agent:
         obs_rot = F.rotate(img=obs, angle=-zrot, expand=False, interpolation=F.InterpolationMode.NEAREST)
         return obs_rot
 
+    def rotate_coord(self, h, w, zrot, num_rows, num_cols):
+        center_h = (num_rows - 1) / 2.0
+        center_w = (num_cols - 1) / 2.0
+        theta = np.deg2rad(zrot)
+
+        h_shifted = h - center_h
+        w_shifted = w - center_w
+        h_rot = np.sin(theta) * w_shifted + np.cos(theta) * h_shifted + center_h
+        w_rot = np.cos(theta) * w_shifted - np.sin(theta) * h_shifted + center_w
+
+        h_rot = int(np.floor(h_rot + 0.5))
+        w_rot = int(np.floor(w_rot + 0.5))
+        h_rot = int(np.clip(h_rot, 0, num_rows - 1))
+        w_rot = int(np.clip(w_rot, 0, num_cols - 1))
+        return [h_rot, w_rot]
+
     def save_experience(self, step, action, observation, reward, goal, true_landing_pos):
         H, W, C = observation.shape
         h, w = (action['coord_height'], action['coord_width'])
-        experience = torch.zeros((C+1, H, W), requires_grad=False)
-        experience[:C] = torch.tensor(observation, requires_grad=False).permute(2,0,1)
-        experience[-1, h, w] = 1.0
-        experience = F.pad(experience, self.obs_pad)
-        experience = self.encode_obs_to_action(obs=experience, zrot=action['z_rotation'])
-        encoded_obs = experience[:3]
-        encoded_hw = torch.unravel_index(torch.argmax(experience[-1]), shape=experience[-1].shape)
-        encoded_hw = [coord.item() for coord in encoded_hw]
+        obs = torch.tensor(observation, requires_grad=False, dtype=torch.float32).permute(2,0,1)
+        obs = F.pad(obs, self.obs_pad)
+        encoded_obs = self.encode_obs_to_action(obs=obs, zrot=action['z_rotation'])[:self.obs_num_channels]
+        encoded_hw = self.rotate_coord(
+            h + self.obs_pad,
+            w + self.obs_pad,
+            action['z_rotation'],
+            H + 2 * self.obs_pad,
+            W + 2 * self.obs_pad,
+        )
         if true_landing_pos is not None:
             goal[0] = true_landing_pos[0]
             goal[1] = true_landing_pos[1]
@@ -244,6 +262,4 @@ class Agent:
         batch_hcoord = torch.tensor(batch_hcoord, requires_grad=False, dtype=torch.long)
         batch_wcoord = torch.tensor(batch_wcoord, requires_grad=False, dtype=torch.long)
         return batch_obs, batch_goals, batch_velocities, batch_grasps, batch_throws, batch_hcoord, batch_wcoord
-
-
 
